@@ -26,8 +26,8 @@
   <div id="result" class="loading" style="display:none;"></div>
 
   <script>
-    // ★Step 3でコピーしたGASのデプロイURL（末尾が /exec のもの）を貼り付けます
-    const GAS_API_URL =https://script.google.com/macros/s/AKfycbzO_kSVfU9A9ty2ZCgilj819cmXXEtQ8qrlis7_7wxbmd_j2tgJNQ0ND48Jbqjq1jd6uQ/exec;
+    // ★ご自身のGASデプロイURL（末尾が /exec のもの）を貼り付けます
+    const GAS_API_URL = https://script.google.com/macros/s/AKfycbzO_kSVfU9A9ty2ZCgilj819cmXXEtQ8qrlis7_7wxbmd_j2tgJNQ0ND48Jbqjq1jd6uQ/exec;
 
     let html5QrCode;
     let isProcessing = false;
@@ -37,50 +37,26 @@
       const resultDiv = document.getElementById('result');
       resultDiv.style.display = 'block';
       resultDiv.className = 'loading';
-      resultDiv.innerText = "カメラを初期化中...";
+      resultDiv.innerText = "カメラを起動中...";
 
       html5QrCode = new Html5Qrcode("reader");
 
-      try {
-        const devices = await Html5Qrcode.getCameras();
-        let selectedCameraId;
+      const config = { fps: 10, qrbox: { width: 220, height: 220 } };
 
-        if (devices && devices.length > 0) {
-          selectedCameraId = devices[devices.length - 1].id;
-          for (let dev of devices) {
-            const label = dev.label.toLowerCase();
-            if (label.includes('back') || label.includes('背面') || label.includes('環境')) {
-              selectedCameraId = dev.id;
-              break;
-            }
-          }
-          await html5QrCode.start(
-            selectedCameraId,
-            { fps: 15, qrbox: { width: 220, height: 220 } },
-            onScanSuccess
-          );
-        } else {
-          await startFallback();
+      try {
+        // iOS向け：直接背面カメラ（environment）を呼び出す
+        await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+        resultDiv.innerText = "QRコードを枠内にかざしてください";
+      } catch (err) {
+        try {
+          // 背面で起動しない場合のバックアップ（全般カメラ呼び出し）
+          await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess);
+          resultDiv.innerText = "QRコードを枠内にかざしてください";
+        } catch (err2) {
+          resultDiv.className = 'error';
+          resultDiv.innerText = "【カメラ起動エラー】\nブラウザのカメラアクセス許可を確認してください";
+          document.getElementById('start-btn').style.display = 'inline-block';
         }
-        resultDiv.innerText = "QRコードを枠内にかざしてください";
-      } catch (err) {
-        await startFallback();
-      }
-    }
-
-    async function startFallback() {
-      const resultDiv = document.getElementById('result');
-      try {
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          { fps: 15, qrbox: { width: 220, height: 220 } },
-          onScanSuccess
-        );
-        resultDiv.innerText = "QRコードを枠内にかざしてください";
-      } catch (err) {
-        resultDiv.className = 'error';
-        resultDiv.innerText = "【カメラ起動エラー】\n" + err;
-        document.getElementById('start-btn').style.display = 'inline-block';
       }
     }
 
