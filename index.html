@@ -3,88 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>文化祭 入場受付スキャナー</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <title>カメラ動作テスト</title>
   <style>
-    body { font-family: -apple-system, sans-serif; text-align: center; background-color: #f0f2f5; margin: 0; padding: 15px; }
-    h2 { color: #333; margin-top: 5px; }
-    #reader { width: 100%; max-width: 400px; margin: 10px auto; background: #000; border-radius: 12px; overflow: hidden; min-height: 250px; }
-    #result { max-width: 400px; margin: 15px auto; padding: 15px; font-size: 18px; font-weight: bold; border-radius: 10px; white-space: pre-wrap; line-height: 1.5; }
-    .ok { background-color: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
-    .error { background-color: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
-    .loading { background-color: #fff3cd; color: #856404; border: 2px solid #ffeeba; }
-    .start-btn { background-color: #007aff; color: white; border: none; padding: 16px 32px; font-size: 18px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    video { width: 100%; max-width: 400px; height: 300px; background: #000; border-radius: 10px; margin-top: 10px; }
+    button { padding: 15px 30px; font-size: 18px; font-weight: bold; background-color: #007aff; color: white; border: none; border-radius: 8px; }
+    #status { font-weight: bold; margin-top: 15px; }
   </style>
 </head>
 <body>
 
-  <h2>文化祭 入場受付スキャナー</h2>
+  <h2>カメラ動作確認テスト</h2>
+  <button onclick="testCamera()">📷 テストカメラ起動</button>
   
-  <button id="start-btn" class="start-btn" onclick="initScanner()">📷 カメラを起動する</button>
-  
-  <div id="reader"></div>
-  <div id="result" class="loading" style="display:none;"></div>
+  <div id="status">ボタンを押してください</div>
+  <video id="video" autoplay playsinline muted></video>
 
   <script>
-    // ★ご自身のGASデプロイURL（末尾が /exec のもの）を貼り付けます
-    const GAS_API_URL = https://script.google.com/macros/s/AKfycbzO_kSVfU9A9ty2ZCgilj819cmXXEtQ8qrlis7_7wxbmd_j2tgJNQ0ND48Jbqjq1jd6uQ/exec;
-
-    let html5QrCode;
-    let isProcessing = false;
-
-    async function initScanner() {
-      document.getElementById('start-btn').style.display = 'none';
-      const resultDiv = document.getElementById('result');
-      resultDiv.style.display = 'block';
-      resultDiv.className = 'loading';
-      resultDiv.innerText = "カメラを起動中...";
-
-      html5QrCode = new Html5Qrcode("reader");
-
-      const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+    async function testCamera() {
+      const status = document.getElementById('status');
+      const video = document.getElementById('video');
+      status.innerText = "カメラ起動リクエスト中...";
 
       try {
-        // iOS向け：直接背面カメラ（environment）を呼び出す
-        await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-        resultDiv.innerText = "QRコードを枠内にかざしてください";
-      } catch (err) {
-        try {
-          // 背面で起動しない場合のバックアップ（全般カメラ呼び出し）
-          await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess);
-          resultDiv.innerText = "QRコードを枠内にかざしてください";
-        } catch (err2) {
-          resultDiv.className = 'error';
-          resultDiv.innerText = "【カメラ起動エラー】\nブラウザのカメラアクセス許可を確認してください";
-          document.getElementById('start-btn').style.display = 'inline-block';
-        }
-      }
-    }
-
-    function onScanSuccess(decodedText) {
-      if (isProcessing) return;
-      isProcessing = true;
-
-      const resultDiv = document.getElementById('result');
-      resultDiv.className = 'loading';
-      resultDiv.innerText = "照合中...";
-
-      const requestUrl = `${GAS_API_URL}?ticketId=${encodeURIComponent(decodedText)}`;
-
-      fetch(requestUrl, { method: "GET", redirect: "follow" })
-        .then(response => {
-          if (!response.ok) throw new Error("ネットワーク応答エラー");
-          return response.json();
-        })
-        .then(res => {
-          resultDiv.className = res.success ? 'ok' : 'error';
-          resultDiv.innerText = res.message;
-          setTimeout(() => { isProcessing = false; }, 1800);
-        })
-        .catch(err => {
-          resultDiv.className = 'error';
-          resultDiv.innerText = "【通信エラー】\nGASのデプロイ権限（全員）を確認してください";
-          setTimeout(() => { isProcessing = false; }, 2500);
+        // 背面カメラを優先取得
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } }
         });
+        video.srcObject = stream;
+        status.style.color = "green";
+        status.innerText = "【成功】カメラの映像が表示されました！";
+      } catch (err) {
+        status.style.color = "red";
+        status.innerText = "【失敗】" + err.name + ": " + err.message;
+      }
     }
   </script>
 </body>
