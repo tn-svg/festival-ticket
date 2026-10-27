@@ -4,17 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>文化祭 入場受付スキャナー</title>
-  <!-- iOSと最も相性が良い軽量QR解析ライブラリ -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <style>
     body { font-family: -apple-system, sans-serif; text-align: center; background-color: #f0f2f5; margin: 0; padding: 15px; }
     h2 { color: #333; margin-top: 5px; }
     
-    /* カメラ表示コンテナ */
-    #video-container { position: relative; width: 100%; max-width: 400px; margin: 10px auto; background: #000; border-radius: 12px; overflow: hidden; }
+    /* カメラエリア */
+    #video-container {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      margin: 10px auto;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
     video { width: 100%; height: auto; display: block; }
     
-    /* 中央のQRコードガイド枠 */
+    /* QRコード読み取り枠（ビデオの一番上に重ねる） */
     .scan-guide {
       position: absolute;
       top: 50%;
@@ -22,9 +30,10 @@
       transform: translate(-50%, -50%);
       width: 200px;
       height: 200px;
-      border: 3px solid #007aff;
+      border: 4px solid #007aff;
       border-radius: 16px;
-      box-shadow: 0 0 0 400px rgba(0, 0, 0, 0.4);
+      box-sizing: border-box;
+      z-index: 10;
       pointer-events: none;
     }
 
@@ -43,7 +52,7 @@
   
   <div id="video-container" style="display:none;">
     <video id="video" autoplay playsinline muted></video>
-    <!-- 四角いガイド枠 -->
+    <!-- ガイド枠 -->
     <div class="scan-guide"></div>
   </div>
   <canvas id="canvas" style="display:none;"></canvas>
@@ -51,7 +60,7 @@
   <div id="result" class="loading" style="display:none;"></div>
 
   <script>
-    // ★ご自身のGASデプロイURL（末尾が /exec のもの）を貼り付けます
+    // ★ご自身のGASデプロイURLを貼り付けます
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzO_kSVfU9A9ty2ZCgilj819cmXXEtQ8qrlis7_7wxbmd_j2tgJNQ0ND48Jbqjq1jd6uQ/exec";
 
     const video = document.getElementById('video');
@@ -121,4 +130,16 @@
           return response.json();
         })
         .then(res => {
-          resultDiv.className = res.success
+          resultDiv.className = res.success ? 'ok' : 'error';
+          resultDiv.innerText = res.message;
+          setTimeout(() => { isProcessing = false; }, 2000);
+        })
+        .catch(err => {
+          resultDiv.className = 'error';
+          resultDiv.innerText = "【通信エラー】\nGASのデプロイ権限（全員）を確認してください";
+          setTimeout(() => { isProcessing = false; }, 2500);
+        });
+    }
+  </script>
+</body>
+</html>
